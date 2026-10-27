@@ -1,0 +1,4 @@
+-r requirements.txt
+pytest>=8.0
+scikit-learn>=1.5
+matplotlib>=3.9

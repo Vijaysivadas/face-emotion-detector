@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.env
+.deepface/
+evaluation_output/
+*.h5
+*.keras
+.streamlit/secrets.toml
