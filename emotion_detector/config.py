@@ -31,8 +31,10 @@ MAX_IMAGE_SIDE = 1600
 # Live video is analysed on a smaller copy, then labels are drawn on the
 # original frame. The emotion CNN ultimately sees 48x48 face crops, so this
 # substantially improves responsiveness without reducing useful detail.
-LIVE_ANALYSIS_WIDTH = 480
-LIVE_ANALYZE_EVERY_N_FRAMES = 5
+LIVE_ANALYSIS_WIDTH = 416
+# Never queue emotion inferences. A new one starts only after the previous
+# inference has finished, keeping the actual video feed responsive.
+LIVE_INFERENCE_INTERVAL_SECONDS = 0.25
 
 PROJECT = {
     "group": "Group 5",

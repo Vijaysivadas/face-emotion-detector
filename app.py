@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import io
 import os
-from typing import Callable
+import time
+from concurrent.futures import Future, ThreadPoolExecutor
+from threading import Lock
 
 import altair as alt
 import cv2
@@ -20,7 +22,7 @@ from emotion_detector.config import (
     EMOTIONS,
     EMOTION_STYLE,
     LIVE_ANALYSIS_WIDTH,
-    LIVE_ANALYZE_EVERY_N_FRAMES,
+    LIVE_INFERENCE_INTERVAL_SECONDS,
     PROJECT,
     TEAM_MEMBERS,
 )
@@ -156,8 +158,8 @@ def render_live_video(settings: dict[str, object]) -> None:
         return
 
     st.success(
-        f"Optimised live mode: OpenCV fast detection, {LIVE_ANALYSIS_WIDTH}px analysis frames, and one inference every "
-        f"{LIVE_ANALYZE_EVERY_N_FRAMES} frames. Labels stay smooth between inferences."
+        f"Optimised live mode: OpenCV fast detection on {LIVE_ANALYSIS_WIDTH}px frames. "
+        "Video stays live while emotion analysis runs separately in the background."
     )
     try:
         ensure_model()
@@ -169,12 +171,14 @@ def render_live_video(settings: dict[str, object]) -> None:
 
     class EmotionVideoProcessor(VideoProcessorBase):
         def __init__(self) -> None:
-            self.frame_number = 0
             self.faces: list[FaceResult] = []
+            self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="emotion-inference")
+            self.pending: Future[list[FaceResult]] | None = None
+            self.last_inference_started = 0.0
+            self.lock = Lock()
 
-        def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
-            rgb = frame.to_ndarray(format="rgb24")
-            self.frame_number += 1
+        def _analyse_frame(self, rgb: np.ndarray) -> list[FaceResult]:
+            """Run expensive inference away from the video-frame callback."""
             height, width = rgb.shape[:2]
             analysis_width = min(LIVE_ANALYSIS_WIDTH, width)
             scale = analysis_width / width
@@ -183,28 +187,48 @@ def render_live_video(settings: dict[str, object]) -> None:
                 if scale < 1
                 else rgb
             )
-            if self.frame_number % LIVE_ANALYZE_EVERY_N_FRAMES == 1:
-                try:
-                    detected_faces = analyze(analysis_frame, **settings)
-                    if scale < 1:
-                        inverse_scale = 1 / scale
-                        self.faces = [
-                            FaceResult(
-                                box=tuple(round(value * inverse_scale) for value in face.box),
-                                dominant_emotion=face.dominant_emotion,
-                                scores=face.scores,
-                                face_confidence=face.face_confidence,
-                            )
-                            for face in detected_faces
-                        ]
-                    else:
-                        self.faces = detected_faces
-                except Exception:
-                    # Keep the most recently successful labels visible rather
-                    # than interrupting the video stream on a transient frame.
-                    pass
-                    self.faces = []
-            return av.VideoFrame.from_ndarray(annotate(rgb, self.faces), format="rgb24")
+            detected_faces = analyze(analysis_frame, **settings)
+            if scale >= 1:
+                return detected_faces
+            inverse_scale = 1 / scale
+            return [
+                FaceResult(
+                    box=tuple(round(value * inverse_scale) for value in face.box),
+                    dominant_emotion=face.dominant_emotion,
+                    scores=face.scores,
+                    face_confidence=face.face_confidence,
+                )
+                for face in detected_faces
+            ]
+
+        def _update_inference(self, rgb: np.ndarray) -> None:
+            """Keep only one task active; never let old camera frames queue."""
+            now = time.monotonic()
+            with self.lock:
+                if self.pending is not None and self.pending.done():
+                    try:
+                        self.faces = self.pending.result()
+                    except Exception:
+                        # Preserve the last good overlay after a bad frame.
+                        pass
+                    self.pending = None
+                if (
+                    self.pending is None
+                    and now - self.last_inference_started >= LIVE_INFERENCE_INTERVAL_SECONDS
+                ):
+                    # The copy lets WebRTC immediately advance to the next frame.
+                    self.pending = self.executor.submit(self._analyse_frame, rgb.copy())
+                    self.last_inference_started = now
+
+        def __del__(self) -> None:
+            self.executor.shutdown(wait=False, cancel_futures=True)
+
+        def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
+            rgb = frame.to_ndarray(format="rgb24")
+            self._update_inference(rgb)
+            with self.lock:
+                overlay_faces = list(self.faces)
+            return av.VideoFrame.from_ndarray(annotate(rgb, overlay_faces), format="rgb24")
 
     webrtc_streamer(
         key="emotion-live-video",
