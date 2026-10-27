@@ -28,6 +28,12 @@ DEFAULT_DETECTOR = "opencv"
 # pixel count and the emotion CNN only ever sees a 48x48 face crop anyway.
 MAX_IMAGE_SIDE = 1600
 
+# Live video is analysed on a smaller copy, then labels are drawn on the
+# original frame. The emotion CNN ultimately sees 48x48 face crops, so this
+# substantially improves responsiveness without reducing useful detail.
+LIVE_ANALYSIS_WIDTH = 480
+LIVE_ANALYZE_EVERY_N_FRAMES = 5
+
 PROJECT = {
     "group": "Group 5",
     "title": "Emotion Detection from Facial Images",

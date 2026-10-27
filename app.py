@@ -15,7 +15,15 @@ from PIL import Image, UnidentifiedImageError
 
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
 
-from emotion_detector.config import DETECTORS, EMOTIONS, EMOTION_STYLE, PROJECT, TEAM_MEMBERS
+from emotion_detector.config import (
+    DETECTORS,
+    EMOTIONS,
+    EMOTION_STYLE,
+    LIVE_ANALYSIS_WIDTH,
+    LIVE_ANALYZE_EVERY_N_FRAMES,
+    PROJECT,
+    TEAM_MEMBERS,
+)
 from emotion_detector.detector import FaceResult, analyze, load_model, overall_mood, prepare_image
 from emotion_detector.visualize import annotate, crop_face
 
@@ -147,7 +155,17 @@ def render_live_video(settings: dict[str, object]) -> None:
         st.info("Live video needs `streamlit-webrtc` and `av`. Install the project requirements to enable it.")
         return
 
-    st.info("For the smoothest demo, use OpenCV or YuNet. Analysis runs every third frame; intervening frames reuse the latest labels.")
+    st.success(
+        f"Optimised live mode: OpenCV fast detection, {LIVE_ANALYSIS_WIDTH}px analysis frames, and one inference every "
+        f"{LIVE_ANALYZE_EVERY_N_FRAMES} frames. Labels stay smooth between inferences."
+    )
+    try:
+        ensure_model()
+    except Exception as error:
+        st.error("The emotion model could not be loaded. Complete its first-run weight download, then restart the app.")
+        with st.expander("Technical details"):
+            st.exception(error)
+        return
 
     class EmotionVideoProcessor(VideoProcessorBase):
         def __init__(self) -> None:
@@ -157,10 +175,34 @@ def render_live_video(settings: dict[str, object]) -> None:
         def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
             rgb = frame.to_ndarray(format="rgb24")
             self.frame_number += 1
-            if self.frame_number % 3 == 1:
+            height, width = rgb.shape[:2]
+            analysis_width = min(LIVE_ANALYSIS_WIDTH, width)
+            scale = analysis_width / width
+            analysis_frame = (
+                cv2.resize(rgb, (analysis_width, round(height * scale)), interpolation=cv2.INTER_AREA)
+                if scale < 1
+                else rgb
+            )
+            if self.frame_number % LIVE_ANALYZE_EVERY_N_FRAMES == 1:
                 try:
-                    self.faces = analyze(rgb, **settings)
+                    detected_faces = analyze(analysis_frame, **settings)
+                    if scale < 1:
+                        inverse_scale = 1 / scale
+                        self.faces = [
+                            FaceResult(
+                                box=tuple(round(value * inverse_scale) for value in face.box),
+                                dominant_emotion=face.dominant_emotion,
+                                scores=face.scores,
+                                face_confidence=face.face_confidence,
+                            )
+                            for face in detected_faces
+                        ]
+                    else:
+                        self.faces = detected_faces
                 except Exception:
+                    # Keep the most recently successful labels visible rather
+                    # than interrupting the video stream on a transient frame.
+                    pass
                     self.faces = []
             return av.VideoFrame.from_ndarray(annotate(rgb, self.faces), format="rgb24")
 
@@ -253,7 +295,9 @@ def main() -> None:
         if snapshot:
             process_image(Image.open(snapshot), "webcam_snapshot", "camera", settings)
     with live_tab:
-        render_live_video(settings)
+        # A live stream prioritises stable frame rate. Upload/snapshot retain
+        # the detector and alignment choices selected in the sidebar.
+        render_live_video({"detector": "opencv", "align": False, "whole_image_fallback": False})
     with about_tab:
         render_about()
 
