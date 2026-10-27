@@ -26,7 +26,7 @@ from emotion_detector.config import (
     PROJECT,
     TEAM_MEMBERS,
 )
-from emotion_detector.detector import FaceResult, analyze, load_model, overall_mood, prepare_image
+from emotion_detector.detector import FaceResult, analyze, analyze_live_fast, load_model, overall_mood, prepare_image
 from emotion_detector.visualize import annotate, crop_face
 
 
@@ -187,7 +187,9 @@ def render_live_video(settings: dict[str, object]) -> None:
                 if scale < 1
                 else rgb
             )
-            detected_faces = analyze(analysis_frame, **settings)
+            # Fast path: OpenCV detects faces and DeepFace's already-loaded
+            # Emotion CNN predicts all crops as one batch.
+            detected_faces = analyze_live_fast(analysis_frame, model=cached_model())
             if scale >= 1:
                 return detected_faces
             inverse_scale = 1 / scale
@@ -234,9 +236,22 @@ def render_live_video(settings: dict[str, object]) -> None:
         key="emotion-live-video",
         mode=WebRtcMode.SENDRECV,
         video_processor_factory=EmotionVideoProcessor,
-        media_stream_constraints={"video": True, "audio": False},
+        # 640×480 is sharp enough for facial expressions while avoiding the
+        # bandwidth and encode delay of a phone's 1080p/4K default camera feed.
+        media_stream_constraints={
+            "video": {
+                "width": {"ideal": 640, "max": 640},
+                "height": {"ideal": 480, "max": 480},
+                "frameRate": {"ideal": 24, "max": 24},
+            },
+            "audio": False,
+        },
         rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
         async_processing=True,
+        # A queue of one ensures that an overloaded server drops stale frames
+        # instead of returning video from seconds ago.
+        video_receiver_size=1,
+        video_html_attrs={"autoPlay": True, "muted": True, "playsinline": True},
     )
 
 

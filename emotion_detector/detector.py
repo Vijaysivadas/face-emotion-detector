@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 import sys
 from typing import Any
 
@@ -145,3 +146,41 @@ def overall_mood(faces: list[FaceResult]) -> tuple[str, dict[str, float]] | None
         for emotion in EMOTIONS
     }
     return max(averages, key=averages.get), averages
+
+
+@lru_cache(maxsize=1)
+def _live_cascade() -> cv2.CascadeClassifier:
+    """Load OpenCV's local Haar detector once for the low-latency video path."""
+    cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    if cascade.empty():
+        raise RuntimeError("OpenCV's Haar cascade could not be loaded.")
+    return cascade
+
+
+def analyze_live_fast(image_rgb: np.ndarray, model: Any | None = None) -> list[FaceResult]:
+    """Fast live-video inference without DeepFace's general analysis wrapper.
+
+    OpenCV finds all frontal faces and the same DeepFace Emotion CNN predicts
+    the crops in one batch. This deliberately trades difficult-pose accuracy
+    for low latency; uploads retain the full DeepFace pipeline.
+    """
+    image_rgb = np.ascontiguousarray(image_rgb)
+    gray = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2GRAY)
+    detections = _live_cascade().detectMultiScale(
+        gray, scaleFactor=1.16, minNeighbors=5, minSize=(42, 42), flags=cv2.CASCADE_SCALE_IMAGE
+    )
+    if len(detections) == 0:
+        return []
+    image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+    boxes = [tuple(map(int, box)) for box in detections]
+    crops = [image_bgr[y : y + height, x : x + width] for x, y, width, height in boxes]
+    emotion_model = model if model is not None else load_model()
+    probabilities = np.asarray(emotion_model.predict(crops), dtype=float)
+    if probabilities.ndim == 1:
+        probabilities = probabilities.reshape(1, -1)
+    faces = []
+    for box, prediction in zip(boxes, probabilities):
+        values = prediction / max(float(prediction.sum()), 1e-9) * 100
+        scores = {emotion: float(values[index]) for index, emotion in enumerate(EMOTIONS)}
+        faces.append(FaceResult(box, max(scores, key=scores.get), scores))
+    return sorted(faces, key=lambda face: (face.box[0], face.box[1]))
