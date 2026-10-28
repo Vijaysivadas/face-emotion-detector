@@ -1,0 +1,487 @@
+{
+  "generated": "2026-10-28T17:33:25+00:00",
+  "versions": {
+    "deepface": "0.0.103",
+    "tensorflow": "2.21.0",
+    "opencv": "4.14.0"
+  },
+  "labels": [
+    "angry",
+    "disgust",
+    "fear",
+    "happy",
+    "sad",
+    "surprise",
+    "neutral"
+  ],
+  "crop_scale": 1.05,
+  "dataset": {
+    "train": {
+      "angry": 3995,
+      "disgust": 436,
+      "fear": 4097,
+      "happy": 7215,
+      "sad": 4830,
+      "surprise": 3171,
+      "neutral": 4965
+    },
+    "publicTest": {
+      "angry": 467,
+      "disgust": 56,
+      "fear": 496,
+      "happy": 895,
+      "sad": 653,
+      "surprise": 415,
+      "neutral": 607
+    },
+    "privateTest": {
+      "angry": 491,
+      "disgust": 55,
+      "fear": 528,
+      "happy": 879,
+      "sad": 594,
+      "surprise": 416,
+      "neutral": 626
+    }
+  },
+  "accuracy_by_split": {
+    "train": {
+      "single": 0.9205127311992755,
+      "tta": 0.8082134522275245,
+      "n": 28709
+    },
+    "publicTest": {
+      "single": 0.5742546670381722,
+      "tta": 0.5745332961827807,
+      "n": 3589
+    },
+    "privateTest": {
+      "single": 0.5653385344106994,
+      "tta": 0.572582892170521,
+      "n": 3589
+    }
+  },
+  "test": {
+    "split": "privateTest",
+    "accuracy": 0.572582892170521,
+    "top2_accuracy": 0.7528559487322374,
+    "macro_f1": 0.5522019244654188,
+    "weighted_f1": 0.5679395637598104,
+    "expected_calibration_error": 0.14943591729283962,
+    "mean_confidence": 0.721485435962677,
+    "confusion_matrix": [
+      [
+        209,
+        2,
+        64,
+        47,
+        73,
+        15,
+        81
+      ],
+      [
+        14,
+        24,
+        7,
+        3,
+        3,
+        1,
+        3
+      ],
+      [
+        52,
+        1,
+        200,
+        41,
+        107,
+        46,
+        81
+      ],
+      [
+        22,
+        1,
+        32,
+        712,
+        31,
+        20,
+        61
+      ],
+      [
+        55,
+        3,
+        91,
+        71,
+        232,
+        9,
+        133
+      ],
+      [
+        13,
+        1,
+        46,
+        33,
+        11,
+        282,
+        30
+      ],
+      [
+        35,
+        0,
+        48,
+        45,
+        92,
+        10,
+        396
+      ]
+    ],
+    "per_class": {
+      "angry": {
+        "precision": 0.5225,
+        "recall": 0.4256619144602851,
+        "f1": 0.4691358024691358,
+        "support": 491
+      },
+      "disgust": {
+        "precision": 0.75,
+        "recall": 0.43636363636363634,
+        "f1": 0.5517241379310345,
+        "support": 55
+      },
+      "fear": {
+        "precision": 0.4098360655737705,
+        "recall": 0.3787878787878788,
+        "f1": 0.3937007874015748,
+        "support": 528
+      },
+      "happy": {
+        "precision": 0.7478991596638656,
+        "recall": 0.8100113765642776,
+        "f1": 0.7777170944838886,
+        "support": 879
+      },
+      "sad": {
+        "precision": 0.4225865209471767,
+        "recall": 0.39057239057239057,
+        "f1": 0.40594925634295714,
+        "support": 594
+      },
+      "surprise": {
+        "precision": 0.7362924281984334,
+        "recall": 0.6778846153846154,
+        "f1": 0.7058823529411765,
+        "support": 416
+      },
+      "neutral": {
+        "precision": 0.5044585987261146,
+        "recall": 0.6325878594249201,
+        "f1": 0.5613040396881644,
+        "support": 626
+      }
+    },
+    "reliability": [
+      {
+        "bin_start": 0.0,
+        "bin_end": 0.1,
+        "count": 0,
+        "confidence": null,
+        "accuracy": null
+      },
+      {
+        "bin_start": 0.1,
+        "bin_end": 0.2,
+        "count": 0,
+        "confidence": null,
+        "accuracy": null
+      },
+      {
+        "bin_start": 0.2,
+        "bin_end": 0.30000000000000004,
+        "count": 11,
+        "confidence": 0.2766214609146118,
+        "accuracy": 0.36363636363636365
+      },
+      {
+        "bin_start": 0.30000000000000004,
+        "bin_end": 0.4,
+        "count": 141,
+        "confidence": 0.36181581020355225,
+        "accuracy": 0.2695035460992908
+      },
+      {
+        "bin_start": 0.4,
+        "bin_end": 0.5,
+        "count": 580,
+        "confidence": 0.4696320593357086,
+        "accuracy": 0.3396551724137931
+      },
+      {
+        "bin_start": 0.5,
+        "bin_end": 0.6000000000000001,
+        "count": 711,
+        "confidence": 0.5364785194396973,
+        "accuracy": 0.4571026722925457
+      },
+      {
+        "bin_start": 0.6000000000000001,
+        "bin_end": 0.7000000000000001,
+        "count": 345,
+        "confidence": 0.6468626856803894,
+        "accuracy": 0.4608695652173913
+      },
+      {
+        "bin_start": 0.7000000000000001,
+        "bin_end": 0.8,
+        "count": 283,
+        "confidence": 0.7486165761947632,
+        "accuracy": 0.5265017667844523
+      },
+      {
+        "bin_start": 0.8,
+        "bin_end": 0.9,
+        "count": 309,
+        "confidence": 0.854398787021637,
+        "accuracy": 0.6019417475728155
+      },
+      {
+        "bin_start": 0.9,
+        "bin_end": 1.0,
+        "count": 1209,
+        "confidence": 0.9780762195587158,
+        "accuracy": 0.8246484698097601
+      }
+    ],
+    "confidence_histogram": {
+      "edges": [
+        0.0,
+        0.05,
+        0.1,
+        0.15000000000000002,
+        0.2,
+        0.25,
+        0.30000000000000004,
+        0.35000000000000003,
+        0.4,
+        0.45,
+        0.5,
+        0.55,
+        0.6000000000000001,
+        0.65,
+        0.7000000000000001,
+        0.75,
+        0.8,
+        0.8500000000000001,
+        0.9,
+        0.9500000000000001,
+        1.0
+      ],
+      "correct": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        3,
+        12,
+        26,
+        43,
+        154,
+        222,
+        103,
+        82,
+        77,
+        81,
+        68,
+        88,
+        98,
+        152,
+        845
+      ],
+      "incorrect": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        7,
+        37,
+        66,
+        101,
+        282,
+        253,
+        133,
+        101,
+        85,
+        68,
+        66,
+        56,
+        67,
+        76,
+        136
+      ]
+    }
+  },
+  "ablation": [
+    {
+      "variant": "Raw 0\u2013255 pixels (old live mode)",
+      "accuracy": 0.4848147116188353
+    },
+    {
+      "variant": "DeepFace preprocessing ([0, 1])",
+      "accuracy": 0.5653385344106994
+    },
+    {
+      "variant": "+ mirror test-time augmentation",
+      "accuracy": 0.572582892170521
+    }
+  ],
+  "framing": {
+    "detected": 3244,
+    "total": 3589,
+    "deepface_letterbox": {
+      "single": 0.5459309494451294,
+      "tta": 0.5567200986436498
+    },
+    "app_unaligned_tta": 0.561035758323058,
+    "points": [
+      {
+        "scale": 0.9,
+        "variant": "Single pass",
+        "accuracy": 0.5283600493218249
+      },
+      {
+        "scale": 0.9,
+        "variant": "With mirror TTA",
+        "accuracy": 0.5527127003699137
+      },
+      {
+        "scale": 1.0,
+        "variant": "Single pass",
+        "accuracy": 0.5419235511713933
+      },
+      {
+        "scale": 1.0,
+        "variant": "With mirror TTA",
+        "accuracy": 0.561035758323058
+      },
+      {
+        "scale": 1.05,
+        "variant": "Single pass",
+        "accuracy": 0.5388409371146733
+      },
+      {
+        "scale": 1.05,
+        "variant": "With mirror TTA",
+        "accuracy": 0.5601109741060419
+      },
+      {
+        "scale": 1.1,
+        "variant": "Single pass",
+        "accuracy": 0.5372996300863132
+      },
+      {
+        "scale": 1.1,
+        "variant": "With mirror TTA",
+        "accuracy": 0.562577065351418
+      },
+      {
+        "scale": 1.2,
+        "variant": "Single pass",
+        "accuracy": 0.5225030826140568
+      },
+      {
+        "scale": 1.2,
+        "variant": "With mirror TTA",
+        "accuracy": 0.5413070283600493
+      },
+      {
+        "scale": 1.3,
+        "variant": "Single pass",
+        "accuracy": 0.4867447595561036
+      },
+      {
+        "scale": 1.3,
+        "variant": "With mirror TTA",
+        "accuracy": 0.5055487053020962
+      },
+      {
+        "scale": 1.4,
+        "variant": "Single pass",
+        "accuracy": 0.45098643649815046
+      },
+      {
+        "scale": 1.4,
+        "variant": "With mirror TTA",
+        "accuracy": 0.46824907521578296
+      }
+    ]
+  },
+  "detectors": [
+    {
+      "detector": "YuNet",
+      "samples": 400,
+      "detection_rate": 0.905,
+      "accuracy_on_detected": 0.5662983425414365,
+      "end_to_end_accuracy": 0.5125,
+      "ms_per_image": 16.202522251405753
+    },
+    {
+      "detector": "SSD",
+      "samples": 400,
+      "detection_rate": 0.8575,
+      "accuracy_on_detected": 0.5364431486880467,
+      "end_to_end_accuracy": 0.46,
+      "ms_per_image": 47.03370649833232
+    },
+    {
+      "detector": "OpenCV Haar",
+      "samples": 400,
+      "detection_rate": 0.64,
+      "accuracy_on_detected": 0.609375,
+      "end_to_end_accuracy": 0.39,
+      "ms_per_image": 23.600156244938262
+    },
+    {
+      "detector": "MTCNN",
+      "samples": 400,
+      "detection_rate": 0.845,
+      "accuracy_on_detected": 0.5621301775147929,
+      "end_to_end_accuracy": 0.475,
+      "ms_per_image": 149.34143075428437
+    },
+    {
+      "detector": "RetinaFace",
+      "samples": 60,
+      "detection_rate": 0.9833333333333333,
+      "accuracy_on_detected": 0.423728813559322,
+      "end_to_end_accuracy": 0.4166666666666667,
+      "ms_per_image": 5993.425561662298
+    }
+  ],
+  "speed_ms": [
+    {
+      "setup": "DeepFace default (eager, 1 face)",
+      "ms": 13.217392000369728
+    },
+    {
+      "setup": "Compiled call, 1 face",
+      "ms": 4.1447600023821
+    },
+    {
+      "setup": "Compiled call, 1 face + mirror TTA",
+      "ms": 4.9349959986284375
+    },
+    {
+      "setup": "Compiled call, 8 faces + mirror TTA",
+      "ms": 9.423724003136158
+    }
+  ],
+  "display_order": [
+    "happy",
+    "neutral",
+    "surprise",
+    "sad",
+    "angry",
+    "fear",
+    "disgust"
+  ]
+}

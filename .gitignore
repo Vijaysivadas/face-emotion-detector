@@ -9,3 +9,4 @@ evaluation_output/
 *.h5
 *.keras
 .streamlit/secrets.toml
+data/

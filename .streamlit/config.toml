@@ -1,10 +1,25 @@
 [theme]
-base = "light"
+font = "DM Sans:https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400&display=swap"
+headingFont = "Space Grotesk:https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap"
+codeFont = "JetBrains Mono:https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap"
+metricValueFontSize = "1.75rem"
+baseRadius = "0.7rem"
+buttonRadius = "0.6rem"
+showWidgetBorder = true
+
+[theme.light]
 primaryColor = "#5B5BD6"
-backgroundColor = "#FAFAFC"
-secondaryBackgroundColor = "#F1F1F8"
-textColor = "#1F2430"
-font = "sans serif"
+backgroundColor = "#F7F7FA"
+secondaryBackgroundColor = "#EEEEF5"
+textColor = "#16161D"
+borderColor = "#DEDEE8"
+
+[theme.dark]
+primaryColor = "#8F8CF5"
+backgroundColor = "#0F1016"
+secondaryBackgroundColor = "#1A1B25"
+textColor = "#ECECF1"
+borderColor = "#2B2C38"
 
 [server]
 maxUploadSize = 25
