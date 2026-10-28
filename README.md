@@ -44,7 +44,11 @@ Measured on FER-2013 PrivateTest (3,589 held-out faces):
 ## Live camera tips
 
 - On `localhost` or a local network the app connects directly, with no STUN/TURN look-ups, so the camera starts in about 3 seconds.
-- If *"Connection is taking longer than expected"* appears on a **deployed** app, the network needs a TURN relay. Add one of these to the app's Streamlit secrets as root-level keys: `HF_TOKEN` (a free Hugging Face token), `CLOUDFLARE_TURN_KEY_ID` + `CLOUDFLARE_TURN_KEY_API_TOKEN`, or `TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN`.
+- A **deployed** app needs a TURN relay, or you will see *"Connection is taking longer than expected"*. Add one of these to the app's Streamlit secrets as root-level keys:
+  - Cloudflare Realtime TURN: `CLOUDFLARE_TURN_KEY_ID` + `CLOUDFLARE_TURN_KEY_API_TOKEN`
+  - Any TURN service (for example Metered): `TURN_URLS` (comma-separated) + `TURN_USERNAME` + `TURN_CREDENTIAL`
+  - Hugging Face: `HF_TOKEN`
+- The live page's *"Camera not showing or connection slow?"* box shows whether a relay is active, and why it failed if it isn't.
 - Pick **Fast · 480×360** in the sidebar on slow connections.
 
 ## Project structure

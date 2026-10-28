@@ -69,7 +69,7 @@ LIVE_RESOLUTIONS = {
 LIVE_DEFAULT_RESOLUTION = "Balanced · 640×480"
 
 # Extra public STUN servers handed to the browser. TURN relays come from
-# streamlit-webrtc when Cloudflare/Twilio/Hugging Face credentials are set.
+# the app's secrets when Cloudflare, TURN_URLS or Hugging Face credentials are set.
 PUBLIC_STUN_SERVERS = (
     "stun:stun.l.google.com:19302",
     "stun:stun1.l.google.com:19302",

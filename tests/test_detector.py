@@ -113,6 +113,37 @@ def test_local_hosts_skip_stun() -> None:
     assert not _is_local(None)
 
 
+def test_turn_relay_from_secrets(monkeypatch) -> None:
+    import ui.live as live
+
+    for name in ("CLOUDFLARE_TURN_KEY_ID", "CLOUDFLARE_TURN_KEY_API_TOKEN", "TURN_URLS", "HF_TOKEN"):
+        monkeypatch.delenv(name, raising=False)
+    assert live._turn_servers() == ([], None)
+
+    monkeypatch.setenv("TURN_URLS", "turn:relay.example:80, turns:relay.example:443")
+    monkeypatch.setenv("TURN_USERNAME", "user")
+    monkeypatch.setenv("TURN_CREDENTIAL", "secret")
+    servers, problem = live._turn_servers()
+    assert problem is None
+    assert servers == [{"urls": ["turn:relay.example:80", "turns:relay.example:443"], "username": "user", "credential": "secret"}]
+
+
+def test_failing_relay_is_reported(monkeypatch) -> None:
+    import ui.live as live
+
+    for name in ("CLOUDFLARE_TURN_KEY_ID", "CLOUDFLARE_TURN_KEY_API_TOKEN", "TURN_URLS"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("HF_TOKEN", "hf_test")
+
+    def unavailable(token):
+        raise ValueError("Failed to get credentials from HF turn server")
+
+    monkeypatch.setattr(live, "get_hf_ice_servers", unavailable)
+    servers, problem = live._turn_servers()
+    assert servers == []
+    assert "Hugging Face" in problem
+
+
 def test_classifier_averages_with_mirror_image() -> None:
     tf = pytest.importorskip("tensorflow")
     from emotion_detector.detector import EmotionClassifier

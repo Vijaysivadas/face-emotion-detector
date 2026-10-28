@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ipaddress
+import os
 from urllib.parse import urlparse
 
 import numpy as np
@@ -21,7 +22,7 @@ from .photos import analyse_image, render_results
 try:
     import av
     from streamlit_webrtc import VideoProcessorBase, WebRtcMode, webrtc_streamer
-    from streamlit_webrtc.credentials import get_available_ice_servers
+    from streamlit_webrtc.credentials import get_cloudflare_ice_servers, get_hf_ice_servers
 except ImportError:  # pragma: no cover - optional dependency
     av = None
 
@@ -68,30 +69,57 @@ def _is_local(host: str | None) -> bool:
     return address.is_private or address.is_loopback or address.is_link_local
 
 
-def _has_turn(servers: list[dict]) -> bool:
-    for server in servers:
-        urls = server["urls"] if isinstance(server["urls"], list) else [server["urls"]]
-        if any(str(url).startswith("turn") for url in urls):
-            return True
-    return False
+def _secret(name: str) -> str:
+    """A root-level Streamlit secret, or an environment variable of the same name."""
+    try:
+        value = st.secrets.get(name)
+    except Exception:  # no secrets file
+        value = None
+    return str(value or os.environ.get(name, "")).strip()
 
 
-def ice_configuration() -> tuple[dict, dict, str]:
-    """WebRTC ICE settings for the browser and the server, plus a mode label.
+def _turn_servers() -> tuple[list[dict], str | None]:
+    """TURN relays from the first provider whose credentials work, plus why others failed.
+
+    Secrets are read on every run (the provider helpers cache per credential),
+    so a newly added secret works at once; streamlit-webrtc's own
+    auto-detection would keep a "no relay" result cached for an hour.
+    """
+    problems = []
+    cloudflare = (_secret("CLOUDFLARE_TURN_KEY_ID"), _secret("CLOUDFLARE_TURN_KEY_API_TOKEN"))
+    if all(cloudflare):
+        try:
+            return list(get_cloudflare_ice_servers(*cloudflare)), None
+        except Exception as error:
+            problems.append(f"Cloudflare: {error}")
+    if _secret("TURN_URLS"):
+        urls = [url.strip() for url in _secret("TURN_URLS").split(",") if url.strip()]
+        return [{"urls": urls, "username": _secret("TURN_USERNAME"), "credential": _secret("TURN_CREDENTIAL")}], None
+    if _secret("HF_TOKEN"):
+        try:
+            return list(get_hf_ice_servers(_secret("HF_TOKEN"))), None
+        except Exception as error:
+            problems.append(f"Hugging Face: {error}")
+    return [], "; ".join(problems) or None
+
+
+def ice_configuration() -> tuple[dict, dict, str, str | None]:
+    """WebRTC ICE settings for the browser and the server, a mode label and any relay problem.
 
     On localhost or a LAN the browser and server reach each other directly,
     and STUN look-ups only delay the connection (each unreachable STUN
     server can add ~5 s on the server side), so none are used. Remote
-    deployments get TURN relays from Streamlit secrets / environment
-    variables when configured, and public STUN servers otherwise.
+    deployments need a TURN relay from the app's secrets; without one only
+    public STUN servers are offered, which many networks cannot get through.
     """
     host = urlparse(st.context.url or "").hostname
     if _is_local(host):
-        return {"iceServers": []}, {"iceServers": []}, "direct"
-    st.secrets.load_if_toml_exists()  # root-level secrets become environment variables
-    servers = list(get_available_ice_servers())
-    frontend = {"iceServers": servers + [{"urls": list(PUBLIC_STUN_SERVERS)}]}
-    return frontend, {"iceServers": servers}, "turn" if _has_turn(servers) else "stun"
+        return {"iceServers": []}, {"iceServers": []}, "direct", None
+    turn, problem = _turn_servers()
+    stun = {"urls": list(PUBLIC_STUN_SERVERS)}
+    frontend = {"iceServers": turn + [stun]}
+    server = {"iceServers": turn + [{"urls": PUBLIC_STUN_SERVERS[0]}]}
+    return frontend, server, "turn" if turn else "stun", problem
 
 
 def live_settings() -> None:
@@ -174,26 +202,28 @@ def live_dashboard(ctx) -> None:
                 )
 
 
-def _connection_help(mode: str) -> None:
+def _connection_help(mode: str, problem: str | None) -> None:
     labels = {
         "direct": ("#1BAF7A", "Direct local connection", "Browser and server are on the same network, so no relay is needed."),
         "turn": ("#1BAF7A", "TURN relay configured", "Connections work behind strict firewalls and mobile networks."),
-        "stun": ("#EDA100", "STUN only", "Most networks work. Behind strict firewalls, add TURN credentials (see below)."),
+        "stun": ("#EDA100", "STUN only", "No TURN relay, so the camera may not connect on many networks (see below)."),
     }
     color, title, detail = labels[mode]
-    with st.expander("Camera not showing or connection slow?", icon=":material/help:"):
+    with st.expander("Camera not showing or connection slow?", icon=":material/help:", expanded=problem is not None):
         st.markdown(
             f'<span class="status-dot" style="background:{color}"></span>**{title}**: {detail}',
             unsafe_allow_html=True,
         )
+        if problem:
+            st.error(f"A TURN relay is configured but could not be reached. {problem}", icon=":material/error:")
         st.markdown(
             "- Allow camera access in the address bar, and close other apps or tabs using the camera.\n"
             "- Use **Switch camera** if your laptop has more than one camera.\n"
             "- Pick **Fast · 480×360** in the sidebar on slow connections, then restart the camera.\n"
             "- Chrome and Edge give the most reliable WebRTC support.\n"
-            "- **Deployed apps:** if you see *Connection is taking longer than expected*, the network needs a TURN relay. "
-            "Add `HF_TOKEN` (free Hugging Face token), Cloudflare `CLOUDFLARE_TURN_KEY_ID` + `CLOUDFLARE_TURN_KEY_API_TOKEN` "
-            "or Twilio `TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN` to the app's secrets."
+            "- **Deployed apps:** if you see *Connection is taking longer than expected*, add a TURN relay to the app's "
+            "secrets: Cloudflare `CLOUDFLARE_TURN_KEY_ID` + `CLOUDFLARE_TURN_KEY_API_TOKEN`; any TURN service's "
+            "`TURN_URLS` + `TURN_USERNAME` + `TURN_CREDENTIAL`; or `HF_TOKEN` (Hugging Face)."
         )
 
 
@@ -215,7 +245,7 @@ def live_page() -> None:
     except Exception:
         pass  # the engine falls back to OpenCV's bundled Haar cascade
 
-    frontend_config, server_config, mode = ice_configuration()
+    frontend_config, server_config, mode, relay_problem = ice_configuration()
     width, height = LIVE_RESOLUTIONS[st.session_state.live_resolution]
     video_column, dashboard_column = st.columns((1.4, 1), gap="large")
     with video_column:
@@ -251,7 +281,7 @@ def live_page() -> None:
             frame = processor.engine.latest_frame if processor is not None else None
             if frame is not None:
                 st.session_state.live_capture = np.array(frame)
-        _connection_help(mode)
+        _connection_help(mode, relay_problem)
     with dashboard_column:
         live_dashboard(ctx)
 
